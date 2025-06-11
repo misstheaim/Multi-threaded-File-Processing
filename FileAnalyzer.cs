@@ -10,7 +10,7 @@ internal class FileAnalyzer
     {
         if (!Directory.Exists(filesDirectory))
         {
-            throw new Exception("Directory with files doesn't exist!");
+            throw new DirectoryNotFoundException("Directory with files doesn't exist!");
         }
     }
 
@@ -18,7 +18,7 @@ internal class FileAnalyzer
     {
         if (resetEvent is not ManualResetEvent manualResetEvent)
         {
-            throw new Exception("Internal Error");
+            throw new TypeAccessException($"ManualResetEvent type expected. {resetEvent.GetType()} is given.");
         }
         string[] files = Directory.GetFiles(filesDirectory);
         Console.WriteLine("Count of files is - {0}", files.Length);
@@ -30,7 +30,7 @@ internal class FileAnalyzer
     {
         if (resetEvent is not ManualResetEvent manualResetEvent)
         {
-            throw new Exception("Internal Error");
+            throw new TypeAccessException($"ManualResetEvent type expected. {resetEvent.GetType()} is given.");
         }
 
         string[] files = Directory.GetFiles(filesDirectory);
@@ -54,7 +54,7 @@ internal class FileAnalyzer
             }
         }
 
-        Console.WriteLine("Count of lines in each file is - {0}", lineCounter);
+        Console.WriteLine("Count of lines in all files is - {0}", lineCounter);
 
         manualResetEvent.Set();
     }
@@ -63,7 +63,7 @@ internal class FileAnalyzer
     {
         if (resetEvent is not ManualResetEvent manualResetEvent)
         {
-            throw new Exception("Internal Error");
+            throw new TypeAccessException($"ManualResetEvent type expected. {resetEvent.GetType()} is given.");
         }
 
         string[] files = Directory.GetFiles(filesDirectory);
@@ -87,7 +87,7 @@ internal class FileAnalyzer
             }
         }
 
-        Console.WriteLine("Count of words in each file is - {0}", wordCounter);
+        Console.WriteLine("Count of words in all files is - {0}", wordCounter);
 
         manualResetEvent.Set();
     }
@@ -113,6 +113,7 @@ internal class FileAnalyzer
             StreamReader sr = new StreamReader(searchingOptions.readingFile);
             int lineCounter = 0;
             bool matchFound = false;
+            Regex rgx = new Regex("[^a-zA-Z0-9 -]");
             try
             {
                 while (!sr.EndOfStream)
@@ -123,7 +124,6 @@ internal class FileAnalyzer
                     int wordCounter = 0;
                     foreach(string word in lineOfWords)
                     {
-                        Regex rgx = new Regex("[^a-zA-Z0-9 -]");
                         string finishedWord = rgx.Replace(word, "");
                         wordCounter++;
                         if (finishedWord.Equals(searchingOptions.searchingWord))
