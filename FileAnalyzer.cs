@@ -18,7 +18,7 @@ internal class FileAnalyzer
     {
         if (resetEvent is not ManualResetEvent manualResetEvent)
         {
-            throw new TypeAccessException($"ManualResetEvent type expected. {resetEvent.GetType()} is given.");
+            throw new ArgumentException($"ManualResetEvent type expected. {resetEvent.GetType()} is given.");
         }
         string[] files = Directory.GetFiles(filesDirectory);
         Console.WriteLine("Count of files is - {0}", files.Length);
@@ -30,7 +30,7 @@ internal class FileAnalyzer
     {
         if (resetEvent is not ManualResetEvent manualResetEvent)
         {
-            throw new TypeAccessException($"ManualResetEvent type expected. {resetEvent.GetType()} is given.");
+            throw new ArgumentException($"ManualResetEvent type expected. {resetEvent.GetType()} is given.");
         }
 
         string[] files = Directory.GetFiles(filesDirectory);
@@ -39,18 +39,12 @@ internal class FileAnalyzer
 
         foreach (string file in files)
         {
-            StreamReader sr = new StreamReader(file);
-            try
+            using StreamReader sr = new StreamReader(file);
+
+            while(!sr.EndOfStream)
             {
-                while(!sr.EndOfStream)
-                {
-                    sr.ReadLine();
-                    lineCounter++;
-                }
-            }
-            finally
-            {
-                sr.Close();
+                sr.ReadLine();
+                lineCounter++;
             }
         }
 
@@ -63,7 +57,7 @@ internal class FileAnalyzer
     {
         if (resetEvent is not ManualResetEvent manualResetEvent)
         {
-            throw new TypeAccessException($"ManualResetEvent type expected. {resetEvent.GetType()} is given.");
+            throw new ArgumentException($"ManualResetEvent type expected. {resetEvent.GetType()} is given.");
         }
 
         string[] files = Directory.GetFiles(filesDirectory);
@@ -72,18 +66,12 @@ internal class FileAnalyzer
 
         foreach (string file in files)
         {
-            StreamReader sr = new StreamReader(file);
-            try
+            using StreamReader sr = new StreamReader(file);
+
+            while (!sr.EndOfStream)
             {
-                while (!sr.EndOfStream)
-                {
-                    string line = sr.ReadLine();
-                    wordCounter += line.Split(new char[] { ' ' }).Length;
-                }
-            }
-            finally
-            {
-                sr.Close();
+                string line = sr.ReadLine();
+                wordCounter += line.Split(new char[] { ' ' }).Length;
             }
         }
 
@@ -98,11 +86,19 @@ internal class FileAnalyzer
     {
         string[] files = Directory.GetFiles(filesDirectory);
 
+        List<Thread> threads = new List<Thread>(files.Length);
+
         foreach (string file in files)
         {
             SearchOptions options = new SearchOptions(word, file);
             Thread searchThread = new Thread(ScanFile);
             searchThread.Start(options);
+            threads.Add(searchThread);
+        }
+
+        foreach (Thread searchThread in threads)
+        {
+            searchThread.Join();
         }
     }
 
@@ -110,37 +106,32 @@ internal class FileAnalyzer
     {
         if (options is SearchOptions searchingOptions)
         {
-            StreamReader sr = new StreamReader(searchingOptions.readingFile);
+            using StreamReader sr = new StreamReader(searchingOptions.readingFile);
             int lineCounter = 0;
             bool matchFound = false;
             Regex rgx = new Regex("[^a-zA-Z0-9 -]");
-            try
+
+            while (!sr.EndOfStream)
             {
-                while (!sr.EndOfStream)
+                lineCounter++;
+                string line = sr.ReadLine();
+                string[] lineOfWords =  line.Split(new char[] { ' ' });
+                int wordCounter = 0;
+                foreach(string word in lineOfWords)
                 {
-                    lineCounter++;
-                    string line = sr.ReadLine();
-                    string[] lineOfWords =  line.Split(new char[] { ' ' });
-                    int wordCounter = 0;
-                    foreach(string word in lineOfWords)
+                    string finishedWord = rgx.Replace(word, "");
+                    wordCounter++;
+                    if (finishedWord.Equals(searchingOptions.searchingWord))
                     {
-                        string finishedWord = rgx.Replace(word, "");
-                        wordCounter++;
-                        if (finishedWord.Equals(searchingOptions.searchingWord))
-                        {
-                            matchFound = true;
-                            Console.WriteLine("Word found in {0} file, line - {1}, position - {2}", searchingOptions.readingFile, lineCounter, wordCounter);
-                        }
+                        matchFound = true;
+                        Console.WriteLine("Word found in {0} file, line - {1}, position - {2}", searchingOptions.readingFile, lineCounter, wordCounter);
                     }
                 }
-                if (!matchFound)
-                {
-                    Console.WriteLine("Word \"{0}\" was not found in file {1}", searchingOptions.searchingWord, searchingOptions.readingFile);
-                }
             }
-            finally
+
+            if (!matchFound)
             {
-                sr.Close();
+                Console.WriteLine("Word \"{0}\" was not found in file {1}", searchingOptions.searchingWord, searchingOptions.readingFile);
             }
         }
     }
